@@ -32,6 +32,7 @@ angular
 
       this._options = defaults(options, {
         expireTime: defaultExpireTime,
+        lazy: true,
         id: id,
         size: 0
       });
@@ -43,7 +44,8 @@ angular
      * @return {*}
      */
     Stash.prototype.get = function (key) {
-      var thing, lifetime;
+      var isLazy = this.info().lazy,
+        thing, lifetime;
 
       if (!(thing = this._cache[key])) {
         return;
@@ -51,11 +53,17 @@ angular
 
       lifetime = new Date() - thing.created;
 
+      if (!isLazy) {
+        this.clean();
+      }
+
       if (lifetime < this.info().expireTime) {
         return thing.value;
       }
 
-      this.remove(key);
+      if (isLazy) {
+        this.remove(key);
+      }
     };
 
     /**
@@ -102,6 +110,19 @@ angular
      */
     Stash.prototype.destroy = function () {
       delete stashes[this.info().id];
+    };
+
+    /**
+     * @method clean()
+     */
+    Stash.prototype.clean = function () {
+      var expireTime = this.info().expireTime;
+      var lifetime;
+
+      angular.forEach(this._cache, function (value, key) {
+        lifetime = new Date() - value.created;
+        if (lifetime > expireTime) this.remove(key);
+      }, this);
     };
 
     /**

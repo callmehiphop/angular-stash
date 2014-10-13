@@ -5,6 +5,7 @@ describe('stashFactory', function () {
   var stashFactory;
   var $httpBackend;
   var $http;
+  var $timeout;
 
   beforeEach(function () {
     module('stash');
@@ -12,6 +13,7 @@ describe('stashFactory', function () {
       stashFactory = $injector.get('stashFactory');
       $httpBackend = $injector.get('$httpBackend');
       $http = $injector.get('$http');
+      $timeout = $injector.get('$timeout');
     });
   });
 
@@ -98,6 +100,7 @@ describe('stashFactory', function () {
   it('should give back #info() about the cache', function () {
     stashFactory('eep').info().should.eql({
       expireTime: 1800000,
+      lazy: true,
       id: 'eep',
       size: 0
     });
@@ -106,6 +109,25 @@ describe('stashFactory', function () {
   it('should #destroy() the cache', function () {
     stashFactory('nope').destroy();
     expect(stashFactory.get('nope')).to.be.undefined;
+  });
+
+  it('should #clean() up any expired items', function (done) {
+    var stash = stashFactory('gewdbai', { expireTime: 100 });
+
+    stash.put('one', 1);
+    stash.put('two', 2);
+    stash.put('three', 3);
+
+    stash.info().size.should.equal(3);
+
+    setTimeout(function () {
+      stash.put('hai', 'uguyz');
+      stash.clean();
+      stash.info().size.should.equal(1);
+      expect(stash.get('one')).to.be.undefined;
+      stash.get('hai').should.equal('uguyz');
+      done();
+    }, 110);
   });
 
   it('should #put() to the cache when $http cache is turned on', function () {
@@ -120,4 +142,19 @@ describe('stashFactory', function () {
     stash.get('/api/sugar/lumps')[1].should.eql({ ohh: 'yes' });
   });
 
+
+  it('should #get() the response from the cache if its available', function (done) {
+    var stash = stashFactory('http.get');
+
+    $http.defaults.cache = stash;
+    stash.put('/api/sugar/lumps', [ 200, { ohh: 'yes' } ]);
+
+    $http.get('/api/sugar/lumps', { cache: true })
+      .then(function (response) {
+        expect(response.data).to.eql({ ohh: 'yes' });
+        done();
+      });
+
+    $timeout.flush();
+  });
 });

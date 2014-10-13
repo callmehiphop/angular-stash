@@ -1,6 +1,6 @@
 {
   "name": "angular-stash",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Angular $cacheFactory alternative that allows you to set expire times on cached items",
   "browser": "angular-stash.js",
   "devDependencies": {
